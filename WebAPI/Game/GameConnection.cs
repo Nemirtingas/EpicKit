@@ -351,7 +351,6 @@ namespace EpicKit.WebAPI.Game
 
             try
             {
-                JArray json;
                 List<string> locales;
 
                 if (requestedLocales?.Any() != true)
@@ -445,7 +444,6 @@ namespace EpicKit.WebAPI.Game
 
                         if (!hasDefault)
                         {
-                            bool x;
                             var unlocked_icon_id = ach.Achievement.UnlockedIconId.Default;
                             var locked_icon_id = ach.Achievement.LockedIconId.Default;
 
