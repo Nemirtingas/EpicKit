@@ -1,6 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using EpicKit.WebAPI.Game.Models.Paging;
+using Newtonsoft.Json;
 
-namespace EpicKit.WebAPI.Game.Models
+namespace EpicKit.WebAPI.Game.Models.Catalog
 {
     public class CatalogModel
     {

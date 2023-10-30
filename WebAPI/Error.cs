@@ -38,7 +38,7 @@ namespace EpicKit
         public const int CommonAuthenticationAuthenticationFailed = 1032;
 
         // EOS Api
-        public const int EOSUserNotFound = 8;
+        public const int EOSUserNotFound = 110016;
 
         public const int OAuthScopeConsentRequired = 58005;
 

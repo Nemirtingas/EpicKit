@@ -1,28 +1,50 @@
-using EpicKit.WebAPI.Game.Models;
+using EpicKit.WebAPI.Game.Models.Achievements;
+using EpicKit.WebAPI.Game.Models.Auth;
+using EpicKit.WebAPI.Game.Models.Catalog;
+using EpicKit.WebAPI.Game.Models.Stats;
+using EpicKit.WebAPI.Game.Models.TitleStorage;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System;
 using System.Net;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace EpicKit.WebAPI.Game
 {
-    [Flags]
     public enum GameFeatures : uint
     {
-        None              = 0x00000000,
-        Achievements      = 0x00000001,
-        AntiCheat         = 0x00000002,
-        Connect           = 0x00000004,
-        Ecom              = 0x00000008,
-        Leaderboards      = 0x00000010,
-        Lobbies           = 0x00000020,
-        Matchmaking       = 0x00000040,
-        Metrics           = 0x00000080,
-        PlayerDataStorage = 0x00000100,
-        Stats             = 0x00000200,
-        TitleStorage      = 0x00000400,
-        Voice             = 0x00000800,
+        [EnumMember(Value = "Achievements")]
+        Achievements,
+        [EnumMember(Value = "AntiCheat")]
+        AntiCheat,
+        [EnumMember(Value = "Connect")]
+        Connect,
+        [EnumMember(Value = "Ecom")]
+        Ecom,
+        [EnumMember(Value = "Leaderboards")]
+        Leaderboards,
+        [EnumMember(Value = "Lobbies")]
+        Lobbies,
+        [EnumMember(Value = "Matchmaking")]
+        Matchmaking,
+        [EnumMember(Value = "Metrics")]
+        Metrics,
+        [EnumMember(Value = "Notifications")]
+        Notifications,
+        [EnumMember(Value = "PlayerDataStorage")]
+        PlayerDataStorage,
+        [EnumMember(Value = "PlayerReports")]
+        PlayerReports,
+        [EnumMember(Value = "ProgressionSnapshot")]
+        ProgressionSnapshot,
+        [EnumMember(Value = "Sanctions")]
+        Sanctions,
+        [EnumMember(Value = "Stats")]
+        Stats,
+        [EnumMember(Value = "TitleStorage")]
+        TitleStorage,
+        [EnumMember(Value = "Voice")]
+        Voice,
     }
 
     public class AchievementThreshold
@@ -88,27 +110,29 @@ namespace EpicKit.WebAPI.Game
             v1_15_1,
             v1_15_2,
             v1_15_3,
+            v1_15_4,
+            v1_15_5,
+            v1_16_0,
+            v1_16_1,
         }
 
-        JObject _Json1;
-        JObject _Json2;
-        JObject _Json3;
+        GameAuthModel _GameAuth;
+        GameOAuthModel _GameOAuthDetails;
+        GameOAuthLoginModel _GameOAuthLoginDetails;
 
         string _ApiVersion;
         string _UserAgent;
 
         public string GameUserId { get; private set; }
         public string GamePassword { get; private set; }
-        public string DeploymentId { get; private set; }
-        string _Nonce;
+        public string DeploymentId => _GameAuth?.DeploymentId;
+        public string _Nonce { get; private set; }
 
-        public string AccountId { get; private set; }
-        public string ProductUserId { get; private set; }
-        public string Namespace { get; private set; }
+        public string AccountId => _GameOAuthDetails?.AccountId;
+        public string ProductUserId => _GameOAuthLoginDetails?.ProductUserId;
+        public string Namespace => _GameOAuthLoginDetails?.SandboxId;
 
-        public string GameAccessToken { get; private set; }
-
-        public GameFeatures GameFeatures { get; private set; }
+        public string GameAccessToken => _GameOAuthLoginDetails.AccessToken;
 
         bool _LoggedIn;
 
@@ -118,15 +142,11 @@ namespace EpicKit.WebAPI.Game
             {
                 AutomaticDecompression = DecompressionMethods.All,
             });
-            _Json1 = new JObject();
-            _Json2 = new JObject();
-            _Json3 = new JObject();
 
             _ApiVersion = string.Empty;
 
             GameUserId = string.Empty;
             GamePassword = string.Empty;
-            DeploymentId = string.Empty;
             _Nonce = string.Empty;
 
             _LoggedIn = false;
@@ -170,9 +190,13 @@ namespace EpicKit.WebAPI.Game
                 case ApiVersion.v1_15_1: return "1.15.1-20662730";
                 case ApiVersion.v1_15_2: return "1.15.2-21689671";
                 case ApiVersion.v1_15_3: return "1.15.3-21924193";
+                case ApiVersion.v1_15_4: return "1.15.4-23143668";
+                case ApiVersion.v1_15_5: return "1.15.5-24099393";
+                case ApiVersion.v1_16_0: return "1.16.0-27024038";
+                case ApiVersion.v1_16_1: return "1.16.1-27379709";
             }
 
-            return "1.15.3-21924193";
+            return ApiVersionToString(ApiVersion.v1_16_1);
         }
 
         void _MakeNonce(int length)
@@ -184,143 +208,145 @@ namespace EpicKit.WebAPI.Game
                 .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        private async Task _GameLogin(string deployement_id, string user_id, string password, AuthToken token, ApiVersion api_version)
+        private async Task _GameAuthAsync(string deployementId)
         {
-            try
+            var content = new FormUrlEncodedContent(new[]
             {
-                _ApiVersion = ApiVersionToString(api_version);
-                _UserAgent = $"EOS-SDK/{_ApiVersion} (Linux/) Unreal/1.0.0";
+                new KeyValuePair<string, string>( "grant_type", "client_credentials" ),
+                new KeyValuePair<string, string>( "deployment_id", deployementId ),
+            });
 
-                GameUserId = user_id;
-                GamePassword = password;
-                DeploymentId = deployement_id;
+            var json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/auth/v1/oauth/token"), content, new Dictionary<string, string>
+            {
+                { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GameUserId}:{GamePassword}"))) },
+                { "User-Agent"   , _UserAgent },
+                { "X-EOS-Version", _ApiVersion },
+            }));
 
-                Uri auth_uri = new Uri($"https://{Shared.EGS_DEV_HOST}/auth/v1/oauth/token");
-                Uri epic_uri = new Uri($"https://{Shared.EGS_DEV_HOST}/epic/oauth/v1/token");
+            if (json.ContainsKey("errorCode"))
+                WebApiException.BuildErrorFromJson(json);
 
-                var content = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>( "grant_type", "client_credentials" ),
-                    new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
-                });
+            _GameAuth = json.ToObject<GameAuthModel>();
+        }
 
-                _Json1 = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, auth_uri, content, new Dictionary<string, string>
-                {
-                    { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GameUserId}:{GamePassword}"))) },
-                    { "User-Agent"   , _UserAgent },
-                    { "X-EOS-Version", _ApiVersion },
-                }));
+        private async Task _GameOAuthAsync(AuthToken token)
+        {
+            var content = default(FormUrlEncodedContent);
 
-                if (_Json1.ContainsKey("errorCode"))
-                    WebApiException.BuildErrorFromJson(_Json1);
-
-                switch (token.Type)
-                {
-                    case AuthToken.TokenType.ExchangeCode:
-                        content = new FormUrlEncodedContent(new[]
-                        {
+            switch (token.Type)
+            {
+                case AuthToken.TokenType.ExchangeCode:
+                    content = new FormUrlEncodedContent(new[]
+                    {
                             new KeyValuePair<string, string>( "grant_type"   , "exchange_code" ),
                             new KeyValuePair<string, string>( "scope"        , "openid" ),
                             new KeyValuePair<string, string>( "exchange_code", token.Token ),
                             new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
                         });
-                        break;
+                    break;
 
-                    case AuthToken.TokenType.RefreshToken:
-                        content = new FormUrlEncodedContent(new[]
-                        {
+                case AuthToken.TokenType.RefreshToken:
+                    content = new FormUrlEncodedContent(new[]
+                    {
                             new KeyValuePair<string, string>( "grant_type"   , "refresh_token" ),
                             new KeyValuePair<string, string>( "scope"        , "openid" ),
                             new KeyValuePair<string, string>( "refresh_token", token.Token ),
                             new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
                         });
-                        break;
+                    break;
+            }
+
+            var json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/epic/oauth/v1/token"), content, new Dictionary<string, string>
+            {
+                { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GameUserId}:{GamePassword}"))) },
+                { "User-Agent"   , _UserAgent },
+                { "X-EOS-Version", _ApiVersion },
+            }));
+
+            if (json.ContainsKey("errorCode"))
+            {
+                try
+                {
+                    WebApiException.BuildErrorFromJson(json);
                 }
-
-                _Json2 = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, epic_uri, content, new Dictionary<string, string>
+                catch (WebApiException e)
                 {
-                    { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GameUserId}:{GamePassword}"))) },
-                    { "User-Agent"   , _UserAgent },
-                    { "X-EOS-Version", _ApiVersion },
-                }));
+                    if (json.ContainsKey("continuation") && e.ErrorCode == WebApiException.OAuthScopeConsentRequired)
+                        throw new WebApiException((string)json["continuation"], WebApiException.OAuthScopeConsentRequired);
 
-                if (_Json2.ContainsKey("errorCode"))
+                    throw;
+                }
+            }
+
+            _GameOAuthDetails = json.ToObject<GameOAuthModel>();
+        }
+
+        private async Task _CreateProductUserIdAsync(string continuationToken)
+        {
+            var json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/auth/v1/users"), new StringContent(string.Empty), new Dictionary<string, string>
+            {
+                { "Authorization", $"Bearer {continuationToken}" },
+                { "User-Agent"   , _UserAgent },
+                { "X-EOS-Version", _ApiVersion },
+            }));
+
+            if (json.ContainsKey("errorCode"))
+                WebApiException.BuildErrorFromJson(json);
+        }
+
+        private async Task _GameLoginWithOAuthTokenAsync()
+        {
+            _MakeNonce(22);
+            var content = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>( "grant_type", "external_auth" ),
+                new KeyValuePair<string, string>( "external_auth_type", "epicgames_access_token" ),
+                new KeyValuePair<string, string>( "external_auth_token", _GameOAuthDetails.AccessToken ),
+                new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
+                new KeyValuePair<string, string>( "nonce", _Nonce ),
+            });
+
+            var json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/auth/v1/oauth/token"), content, new Dictionary<string, string>
+            {
+                { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GameUserId}:{GamePassword}"))) },
+                { "User-Agent"   , _UserAgent },
+                { "X-EOS-Version", _ApiVersion },
+            }));
+
+            if (!json.ContainsKey("errorCode"))
+            {
+                _GameOAuthLoginDetails = json.ToObject<GameOAuthLoginModel>();
+            }
+            else
+            {
+                try
                 {
-                    try
-                    {
-                        WebApiException.BuildErrorFromJson(_Json2);
-                    }
-                    catch (WebApiException e)
-                    {
-                        if (_Json2.ContainsKey("continuation") && e.ErrorCode == WebApiException.OAuthScopeConsentRequired)
-                        {
-                            var ex = new WebApiException((string)_Json2["continuation"], WebApiException.OAuthScopeConsentRequired);
-                            throw ex;
-                        }
-
+                    WebApiException.BuildErrorFromJson(json);
+                }
+                catch(WebApiException ex)
+                {
+                    if (ex.ErrorCode != WebApiException.EOSUserNotFound)
                         throw;
-                    }
+
+                    // If we have the error UserNotFound, then we need to create the product user instead of logging in.
+                    await _CreateProductUserIdAsync((string)json["continuation_token"]);
                 }
+            }
+        }
 
-                _MakeNonce(22);
-                content = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>( "grant_type", "external_auth" ),
-                    new KeyValuePair<string, string>( "external_auth_type", "epicgames_access_token" ),
-                    new KeyValuePair<string, string>( "external_auth_token", (string)_Json2["access_token"] ),
-                    new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
-                    new KeyValuePair<string, string>( "nonce", _Nonce ),
-                });
+        private async Task _GameLoginAsync(string deployementId, string userId, string password, AuthToken token, ApiVersion apiVersion)
+        {
+            try
+            {
+                _ApiVersion = ApiVersionToString(apiVersion);
+                _UserAgent = $"EOS-SDK/{_ApiVersion} (Linux/) Unreal/1.0.0";
 
-                _Json3 = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/auth/v1/oauth/token"), content, new Dictionary<string, string>
-                {
-                    { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{GameUserId}:{GamePassword}"))) },
-                    { "User-Agent"   , _UserAgent },
-                    { "X-EOS-Version", _ApiVersion },
-                }));
+                GameUserId = userId;
+                GamePassword = password;
 
-                if (_Json3.ContainsKey("errorCode"))
-                {
-                    try
-                    {
-                        WebApiException.BuildErrorFromJson(_Json3);
-                    }
-                    catch(WebApiException ex)
-                    {
-                        if (ex.ErrorCode != WebApiException.EOSUserNotFound)
-                            throw;
-
-                        // if we have the error UserNotFound, then we need to create the product user instead of logging in.
-                        _Json3 = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/auth/v1/users"), new StringContent(string.Empty), new Dictionary<string, string>
-                        {
-                            { "Authorization", (string)_Json3["continuation_token"] },
-                            { "User-Agent"   , _UserAgent },
-                            { "X-EOS-Version", _ApiVersion },
-                        }));
-
-                        if (_Json3.ContainsKey("errorCode"))
-                            WebApiException.BuildErrorFromJson(_Json3);
-                    }
-                }
-
-                AccountId = (string)_Json2["account_id"];
-                ProductUserId = (string)_Json3["product_user_id"];
-
-                GameAccessToken = (string)_Json3["access_token"];
-                Namespace = (string)_Json3["sandbox_id"];
-
-                if (_Json1.ContainsKey("features"))
-                {
-                    GameFeatures = GameFeatures.None;
-                    foreach (var feature in new GameFeatures[] { GameFeatures.Achievements, GameFeatures.AntiCheat, GameFeatures.Connect, GameFeatures.Ecom })
-                    {
-                        foreach (var jtoken in (JArray)_Json1["features"])
-                        {
-                            if ((string)jtoken == feature.ToString())
-                                GameFeatures |= feature;
-                        }
-                    }
-                }
+                await _GameAuthAsync(deployementId);
+                await _GameOAuthAsync(token);
+                await _GameLoginWithOAuthTokenAsync();
 
                 _LoggedIn = true;
             }
@@ -330,14 +356,16 @@ namespace EpicKit.WebAPI.Game
             }
         }
 
-        public Task<string> RunContinuationToken(string continuation_token, string deployement_id, string user_id, string password) =>
+        public Task<string> RunContinuationTokenAsync(string continuation_token, string deployement_id, string user_id, string password) =>
             Shared.RunContinuationToken(_WebHttpClient, continuation_token, deployement_id, user_id, password);
 
         public Task GameLoginWithExchangeCodeAsync(string deployement_id, string user_id, string password, string exchange_code, ApiVersion api_version = ApiVersion.v1_15_3) =>
-            _GameLogin(deployement_id, user_id, password, new AuthToken { Token = exchange_code, Type = AuthToken.TokenType.ExchangeCode }, api_version);
+            _GameLoginAsync(deployement_id, user_id, password, new AuthToken { Token = exchange_code, Type = AuthToken.TokenType.ExchangeCode }, api_version);
 
         public Task GameLoginWithRefreshTokenAsync(string deployement_id, string user_id, string password, string game_token, ApiVersion api_version = ApiVersion.v1_15_3) =>
-            _GameLogin(deployement_id, user_id, password, new AuthToken { Token = game_token, Type = AuthToken.TokenType.RefreshToken }, api_version);
+            _GameLoginAsync(deployement_id, user_id, password, new AuthToken { Token = game_token, Type = AuthToken.TokenType.RefreshToken }, api_version);
+
+        public bool HasFeature(GameFeatures feature) => _GameAuth.Features.Contains(feature);
 
         public async Task<List<AchievementsInfos>> GetAchievementsSchemaAsync(IEnumerable<string> requestedLocales = null, int parallelTasks = 5, int version = 2)
         {
@@ -346,7 +374,7 @@ namespace EpicKit.WebAPI.Game
 
             var result = new List<AchievementsInfos>();
 
-            if (!GameFeatures.HasFlag(GameFeatures.Achievements))
+            if (!HasFeature(GameFeatures.Achievements))
                 return result;
 
             try
@@ -501,7 +529,7 @@ namespace EpicKit.WebAPI.Game
 
             var result = new List<StatsModel>();
 
-            if (!GameFeatures.HasFlag(GameFeatures.Stats))
+            if (!HasFeature(GameFeatures.Stats))
                 return result;
 
             // $"https://api.epicgames.dev/stats/v{version}/{_DeploymentId}/stats/{ProductUserId}"
@@ -527,7 +555,7 @@ namespace EpicKit.WebAPI.Game
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
-            if (!GameFeatures.HasFlag(GameFeatures.Ecom))
+            if (!HasFeature(GameFeatures.Ecom))
                 return;
 
             // https://api.epicgames.dev/epic/ecom/v{version}/identities/{AccountId}/entitlements?sandboxId={namespace}&start=0&count=100&includeRedeemed=true
@@ -540,7 +568,7 @@ namespace EpicKit.WebAPI.Game
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
-            if (!GameFeatures.HasFlag(GameFeatures.TitleStorage))
+            if (!HasFeature(GameFeatures.TitleStorage))
                 return new TitleStorageResponseModel();
 
             var content = new StringContent(JsonConvert.SerializeObject(new JObject
@@ -561,7 +589,7 @@ namespace EpicKit.WebAPI.Game
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
-            if (!GameFeatures.HasFlag(GameFeatures.Leaderboards))
+            if (!HasFeature(GameFeatures.Leaderboards))
                 return;
 
             // https://api.epicgames.dev/leaderboards/v{version}/{_DeploymentId}/definitions/leaderboards

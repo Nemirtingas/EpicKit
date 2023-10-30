@@ -1,6 +1,6 @@
 ﻿using Newtonsoft.Json;
 
-namespace EpicKit.WebAPI.Game.Models
+namespace EpicKit.WebAPI.Game.Models.Achievements
 {
     public class AchievementIconLinksModel
     {
