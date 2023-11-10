@@ -56,11 +56,11 @@ namespace EpicKit.WebAPI.Game
     public class AchievementsInfos
     {
         public string AchievementId { get; set; }
-        public Dictionary<string, string> UnlockedDisplayName { get; init; } = new Dictionary<string, string>();
-        public Dictionary<string, string> UnlockedDescription { get; init; } = new Dictionary<string, string>();
-        public Dictionary<string, string> LockedDisplayName { get; init; } = new Dictionary<string, string>();
-        public Dictionary<string, string> LockedDescription { get; init; } = new Dictionary<string, string>();
-        public Dictionary<string, string> FlavorText { get; init; } = new Dictionary<string, string>();
+        public SortedDictionary<string, string> UnlockedDisplayName { get; init; } = new SortedDictionary<string, string>();
+        public SortedDictionary<string, string> UnlockedDescription { get; init; } = new SortedDictionary<string, string>();
+        public SortedDictionary<string, string> LockedDisplayName { get; init; } = new SortedDictionary<string, string>();
+        public SortedDictionary<string, string> LockedDescription { get; init; } = new SortedDictionary<string, string>();
+        public SortedDictionary<string, string> FlavorText { get; init; } = new SortedDictionary<string, string>();
         public string UnlockedIconUrl { get; set; }
         public string LockedIconUrl { get; set; }
         public bool IsHidden { get; set; }
@@ -475,23 +475,26 @@ namespace EpicKit.WebAPI.Game
                             var unlocked_icon_id = ach.Achievement.UnlockedIconId.Default;
                             var locked_icon_id = ach.Achievement.LockedIconId.Default;
 
-                            result.Add(new AchievementsInfos
+                            var achievements = new AchievementsInfos
                             {
-                                AchievementId       = ach.Achievement.Name,
-                                UnlockedDisplayName = new Dictionary<string, string> { { "default", ach.Achievement.UnlockedDisplayName.Default } },
-                                UnlockedDescription = new Dictionary<string, string> { { "default", ach.Achievement.UnlockedDescription.Default } },
-                                LockedDisplayName   = new Dictionary<string, string> { { "default", ach.Achievement.LockedDisplayName.Default } },
-                                LockedDescription   = new Dictionary<string, string> { { "default", ach.Achievement.LockedDescription.Default } },
-                                FlavorText          = new Dictionary<string, string> { { "default", ach.Achievement.FlavorText.Default } },
-                                UnlockedIconUrl     = ach.IconLinks.ContainsKey(unlocked_icon_id) ? ach.IconLinks[unlocked_icon_id].ReadLink.ToString() : null,
-                                LockedIconUrl       = ach.IconLinks.ContainsKey(locked_icon_id) ? ach.IconLinks[locked_icon_id].ReadLink.ToString() : null,
-                                IsHidden            = ach.Achievement.Hidden,
-                                StatsThresholds     = ach.Achievement.StatThresholds.Select(st => new AchievementThreshold
+                                AchievementId = ach.Achievement.Name,
+                                UnlockedDisplayName = new SortedDictionary<string, string> { { "default", ach.Achievement.UnlockedDisplayName.Default } },
+                                UnlockedDescription = new SortedDictionary<string, string> { { "default", ach.Achievement.UnlockedDescription.Default } },
+                                LockedDisplayName = new SortedDictionary<string, string> { { "default", ach.Achievement.LockedDisplayName.Default } },
+                                LockedDescription = new SortedDictionary<string, string> { { "default", ach.Achievement.LockedDescription.Default } },
+                                FlavorText = new SortedDictionary<string, string> { { "default", ach.Achievement.FlavorText.Default } },
+                                UnlockedIconUrl = ach.IconLinks.ContainsKey(unlocked_icon_id) ? ach.IconLinks[unlocked_icon_id].ReadLink.ToString() : null,
+                                LockedIconUrl = ach.IconLinks.ContainsKey(locked_icon_id) ? ach.IconLinks[locked_icon_id].ReadLink.ToString() : null,
+                                IsHidden = ach.Achievement.Hidden,
+                                StatsThresholds = ach.Achievement.StatThresholds.Select(st => new AchievementThreshold
                                 {
                                     Name = st.Key,
                                     Threshold = st.Value,
                                 }).ToList()
-                            });
+                            };
+                            achievements.StatsThresholds.Sort((st1, st2) => st1.Name.CompareTo(st2.Name));
+
+                            result.Add(achievements);
                         }
 
                         var achievement = result.Find(a => a.AchievementId == ach.Achievement.Name);

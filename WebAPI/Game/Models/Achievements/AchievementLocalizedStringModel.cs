@@ -21,7 +21,7 @@ namespace EpicKit.WebAPI.Game.Models.Achievements
 
         public string GetLocalizedString(string locale, out bool isDefault)
         {
-            if (Data.ContainsKey(locale))
+            if (Data.ContainsKey(locale) && !string.IsNullOrWhiteSpace(Data[locale]))
             {
                 isDefault = false;
                 return Data[locale];
