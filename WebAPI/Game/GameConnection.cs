@@ -13,6 +13,8 @@ namespace EpicKit.WebAPI.Game
 {
     public enum GameFeatures : uint
     {
+        [EnumMember(Value = "AccountCreation")]
+        AccountCreation,
         [EnumMember(Value = "Achievements")]
         Achievements,
         [EnumMember(Value = "AntiCheat")]
