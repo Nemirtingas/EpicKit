@@ -22,7 +22,7 @@ namespace EpicKit.Manifest
         public ManifestStoreFlags StoreFlags { get; private set; } = ManifestStoreFlags.None;
         public uint Version { get; private set; } = 0;
 
-        public ManifestMetadatas Metadatas { get; private set; } = new ManifestMetadatas();
+        public ManifestMetadata Metadata { get; private set; } = new ManifestMetadata();
         public ChunkMetadataList ChunkDataList { get; private set; } = new ChunkMetadataList();
         public FileManifestList FileManifestList { get; private set; } = new FileManifestList();
         public CustomFieldList CustomFieldsList { get; private set; } = new CustomFieldList();
@@ -34,8 +34,8 @@ namespace EpicKit.Manifest
             {
                 var startPos = stream.Position;
 
-                Metadatas.SerializeToStream(manifestDataStream);
-                ChunkDataList.SerializeToStream(manifestDataStream, Metadatas.FeatureLevel);
+                Metadata.SerializeToStream(manifestDataStream);
+                ChunkDataList.SerializeToStream(manifestDataStream, Metadata.FeatureLevel);
                 FileManifestList.SerializeToStream(manifestDataStream);
                 CustomFieldsList.SerializeToStream(manifestDataStream);
 
@@ -92,7 +92,7 @@ namespace EpicKit.Manifest
 
             if((stream.Position - start_pos) != Size)
             {
-                // Adjust position for datas alignement.
+                // Adjust position for data alignement.
                 stream.Seek(Size - (stream.Position - start_pos), SeekOrigin.Current);
             }
 
@@ -107,8 +107,8 @@ namespace EpicKit.Manifest
 
                 m_stream.Position = 0;
 
-                Metadatas.Read(m_stream);
-                ChunkDataList.Read(m_stream, Metadatas.FeatureLevel);
+                Metadata.Read(m_stream);
+                ChunkDataList.Read(m_stream, Metadata.FeatureLevel);
                 FileManifestList.Read(m_stream);
                 CustomFieldsList.Read(m_stream);
             }
@@ -132,8 +132,8 @@ namespace EpicKit.Manifest
 
             try
             {
-                Metadatas.ReadAsJson(manifest);
-                ChunkDataList.ReadAsJson(manifest, Metadatas.FeatureLevel);
+                Metadata.ReadAsJson(manifest);
+                ChunkDataList.ReadAsJson(manifest, Metadata.FeatureLevel);
                 FileManifestList.ReadAsJson(manifest);
                 CustomFieldsList.ReadAsJson(manifest);
             }

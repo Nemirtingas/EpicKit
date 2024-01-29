@@ -297,7 +297,7 @@ namespace EpicKit
             try
             {
                 if (!oauth_infos.ContainsKey("access_token") || !oauth_infos.ContainsKey("expires_at"))
-                    throw new WebApiException("OAuth credentials is missing datas.", WebApiException.InvalidParam);
+                    throw new WebApiException("OAuth credentials is missing data.", WebApiException.InvalidParam);
 
                 DateTime dt = new DateTime();
                 {
@@ -564,11 +564,11 @@ namespace EpicKit
 
             try
             {
-                System.Collections.Specialized.NameValueCollection get_datas = new System.Collections.Specialized.NameValueCollection()
+                System.Collections.Specialized.NameValueCollection getData = new System.Collections.Specialized.NameValueCollection()
                 {
                     { "label", label },
                 };
-                string q = Shared.NameValueCollectionToQueryString(get_datas);
+                string q = Shared.NameValueCollectionToQueryString(getData);
                 Uri uri = new Uri($"https://{Shared.EGS_LAUNCHER_HOST}/launcher/api/public/assets/{platform}?{q}");
 
                 JArray response = JArray.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
@@ -704,12 +704,12 @@ namespace EpicKit
 
             try
             {
-                System.Collections.Specialized.NameValueCollection get_datas = new System.Collections.Specialized.NameValueCollection()
+                System.Collections.Specialized.NameValueCollection getData = new System.Collections.Specialized.NameValueCollection()
                 {
                     { "start", start.ToString() },
                     { "count", count.ToString() },
                 };
-                string q = Shared.NameValueCollectionToQueryString(get_datas);
+                string q = Shared.NameValueCollectionToQueryString(getData);
                 Uri uri = new Uri($"https://{Shared.EGS_ENTITLEMENT_HOST}/entitlement/api/account/{(string)_OAuthInfos["account_id"]}/entitlements?{q}");
 
                 JArray response = JArray.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
@@ -740,7 +740,7 @@ namespace EpicKit
 
             try
             {
-                System.Collections.Specialized.NameValueCollection get_datas = new System.Collections.Specialized.NameValueCollection()
+                System.Collections.Specialized.NameValueCollection getData = new System.Collections.Specialized.NameValueCollection()
                 {
                     { "id", catalog_item_id },
                     { "includeDLCDetails", include_dlcs.ToString() },
@@ -748,7 +748,7 @@ namespace EpicKit
                     { "country", "US" },
                     { "locale", "en" }
                 };
-                string q = Shared.NameValueCollectionToQueryString(get_datas);
+                string q = Shared.NameValueCollectionToQueryString(getData);
 
                 Uri uri = new Uri($"https://{Shared.EGS_CATALOG_HOST}/catalog/api/shared/namespace/{game_namespace}/bulk/items?{q}");
 

@@ -2,7 +2,7 @@ using Newtonsoft.Json.Linq;
 
 namespace EpicKit.Manifest
 {
-    public class ManifestMetadatas
+    public class ManifestMetadata
     {
         public uint Size { get; private set; } = 0;
         public byte Version { get; private set; } = 0;
@@ -86,7 +86,7 @@ namespace EpicKit.Manifest
 
             if ((stream.Position - start_pos) != Size)
             {
-                // Adjust position for datas alignement.
+                // Adjust position for data alignement.
                 stream.Seek(Size - (stream.Position - start_pos), SeekOrigin.Current);
                 Version = 0;
             }

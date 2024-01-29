@@ -99,7 +99,7 @@ namespace EpicKit.Manifest
 
             if ((stream.Position - start_pos) != Size)
             {
-                // Adjust position for datas alignement.
+                // Adjust position for data alignement.
                 stream.Seek(Size - (stream.Position - start_pos), SeekOrigin.Current);
                 Version = 0;
             }

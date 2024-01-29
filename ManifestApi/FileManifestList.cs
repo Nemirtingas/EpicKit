@@ -130,7 +130,7 @@ namespace EpicKit.Manifest
 
                     if ((stream.Position - chunk_start_pos) != chunk_part_size)
                     {
-                        // Adjust position for datas alignement.
+                        // Adjust position for data alignement.
                         stream.Seek(chunk_part_size - (stream.Position - chunk_start_pos), SeekOrigin.Current);
                     }
                 }
@@ -162,7 +162,7 @@ namespace EpicKit.Manifest
 
             if ((stream.Position - start_pos) != Size)
             {
-                // Adjust position for datas alignement.
+                // Adjust position for data alignement.
                 stream.Seek(Size - (stream.Position - start_pos), SeekOrigin.Current);
                 Version = 0;
             }
