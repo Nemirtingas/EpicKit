@@ -39,6 +39,8 @@ namespace EpicKit.WebAPI.Game
         PlayerReports,
         [EnumMember(Value = "ProgressionSnapshot")]
         ProgressionSnapshot,
+        [EnumMember(Value = "ReceiptValidation")]
+        ReceiptValidation,
         [EnumMember(Value = "Sanctions")]
         Sanctions,
         [EnumMember(Value = "Stats")]
