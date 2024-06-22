@@ -52,7 +52,11 @@ namespace EpicKit.Manifest
             if (Version > 0)
             {
                 foreach (var fileManifest in FileManifests)
-                    Serializer.WriteBytes(writer, fileManifest.Md5Hash);
+                {
+                    Serializer.WriteUInt(writer, fileManifest.HasMd5Hash);
+                    if (fileManifest.HasMd5Hash != 0)
+                        Serializer.WriteBytes(writer, fileManifest.Md5Hash);
+                }
 
                 foreach (var fileManifest in FileManifests)
                     Serializer.WriteString(writer, fileManifest.MimeType);
@@ -140,11 +144,8 @@ namespace EpicKit.Manifest
             {
                 for (int i = 0; i < manifest_count; ++i)
                 {
-                    // if has md5 sum
-                    if (Deserializer.ReadUInt(reader) != 0)
-                    {
+                    if ((FileManifests[i].HasMd5Hash = Deserializer.ReadUInt(reader)) != 0)
                         FileManifests[i].Md5Hash = Deserializer.ReadBytes(reader, 16);
-                    }
                 }
                 for (int i = 0; i < manifest_count; ++i)
                 {

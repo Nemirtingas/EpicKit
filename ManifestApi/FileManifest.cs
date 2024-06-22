@@ -8,6 +8,7 @@ namespace EpicKit.Manifest
         public byte Flags { get; set; } = 0;
         public List<string> InstallTags { get; set; } = new List<string>();
         public List<FileChunk> FileChunks { get; set; } = new List<FileChunk>();
+        public uint HasMd5Hash = 0;
         public byte[] Md5Hash { get; set; } = new byte[16];
         public string MimeType { get; set; } = string.Empty;
         public byte[] Sha256Hash { get; set; } = new byte[32];
