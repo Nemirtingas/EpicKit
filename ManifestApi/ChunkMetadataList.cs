@@ -112,7 +112,7 @@ namespace EpicKit.Manifest
             var dgl = (JObject)json["DataGroupList"];
             var cfl = (JObject)json["ChunkFilesizeList"];
 
-            if (chl.Count != csl.Count || chl.Count != dgl.Count || chl.Count != cfl.Count)
+            if ((csl != null && chl.Count != csl.Count) || chl.Count != dgl.Count || chl.Count != cfl.Count)
                 throw new InvalidDataException();
 
             ManifestVersion = manifest_version;
@@ -128,13 +128,14 @@ namespace EpicKit.Manifest
                 ChunkData[i].Guid = Deserializer.ReadJsonGuid(guid);
 
                 ChunkData[i].Hash = Deserializer.ReadJsonULongBlob((string)chl[guid]);
-                ChunkData[i].Sha1Hash = Deserializer.ReadJsonHexString((string)csl[guid]);
+                if (csl?.TryGetValue(guid, out var shaHash) == true)
+                    ChunkData[i].Sha1Hash = Deserializer.ReadJsonHexString((string)shaHash);
                 ChunkData[i].GroupNum = Deserializer.ReadJsonByteBlob((string)dgl[guid]);
                 ChunkData[i].FileSize = Deserializer.ReadJsonULongBlob((string)cfl[guid]);
 
                 cfl.Remove(guid);
                 chl.Remove(guid);
-                csl.Remove(guid);
+                csl?.Remove(guid);
                 dgl.Remove(guid);
 
                 ++i;
