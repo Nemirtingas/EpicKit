@@ -137,5 +137,31 @@ namespace EpicKit
 
             return (string)response["refresh_token"];
         }
+
+        /// <summary>
+        /// Reads in a block from a file and converts it to the struct
+        /// type specified by the template parameter
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="reader"></param>
+        /// <returns></returns>
+        internal static T FromBinaryReader<T>(BinaryReader reader)
+        {
+            var tType = typeof(T);
+
+            if (!tType.IsValueType)
+                throw new ArgumentException($"{tType.Name} is not a value type.");
+
+            var outType = tType.IsEnum ? Enum.GetUnderlyingType(tType) : tType;
+            // Read in a byte array
+            byte[] bytes = reader.ReadBytes(Marshal.SizeOf(outType));
+
+            // Pin the managed memory while, copy it out the data, then unpin it
+            GCHandle handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+            T theStructure = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), outType);
+            handle.Free();
+
+            return theStructure;
+        }
     }
 }
