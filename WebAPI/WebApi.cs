@@ -2,7 +2,6 @@ using EpicKit.WebAPI;
 using EpicKit.WebAPI.Store.Models;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -10,6 +9,59 @@ using System.Text;
 
 namespace EpicKit
 {
+
+    public class SessionAccount
+    {
+        [JsonProperty("access_token")]
+        public string AccessToken { get; set; }
+
+        [JsonProperty("expires_at")]
+        public DateTimeOffset AccessTokenExpiresAt { get; set; }
+
+        [JsonProperty("refresh_token")]
+        public string RefreshToken { get; set; }
+
+        [JsonProperty("refresh_expires_at")]
+        public DateTimeOffset RefreshExpiresAt { get; set; }
+
+        [JsonProperty("account_id")]
+        public string AccountId { get; set; }
+
+        [JsonProperty("display_name")]
+        public string DisplayName { get; set; }
+
+        internal void UpdateOAuth(OAuthResumeDetails resumeDetails)
+        {
+            AccessToken = resumeDetails.Token;
+            AccessTokenExpiresAt = resumeDetails.ExpiresAt;
+            AccountId = resumeDetails.AccountId;
+            DisplayName = resumeDetails.DisplayName;
+        }
+
+        internal void UpdateOAuth(OAuthStartDetails startDetails)
+        {
+            AccessToken = startDetails.Token;
+            AccessTokenExpiresAt = startDetails.ExpiresAt;
+            RefreshToken = startDetails.RefreshToken;
+            RefreshExpiresAt = startDetails.RefreshExpiresAt;
+            AccountId = startDetails.AccountId;
+            DisplayName = startDetails.DisplayName;
+        }
+
+        public SessionAccount Clone()
+        {
+            return new SessionAccount
+            {
+                AccessToken = AccessToken,
+                AccessTokenExpiresAt = AccessTokenExpiresAt,
+                RefreshToken = RefreshToken,
+                RefreshExpiresAt = RefreshExpiresAt,
+                AccountId = AccountId,
+                DisplayName = DisplayName,
+            };
+        }
+    }
+
     public class WebApi : IDisposable
     {
         CookieContainer _WebCookies;
@@ -19,7 +71,7 @@ namespace EpicKit
         HttpClient _UnauthWebHttpClient;
 
         string _SessionID = string.Empty;
-        JObject _OAuthInfos = new JObject();
+        SessionAccount _OAuthInfos = new();
         bool _LoggedIn = false;
 
         public WebApi()
@@ -47,27 +99,19 @@ namespace EpicKit
             _WebHttpClient.Dispose();
         }
 
-        void _ResetOAuth()
+        T _ParseJson<T>(Stream s)
         {
-            _OAuthInfos = new JObject();
-            _LoggedIn = false;
+            using (var sr = new StreamReader(s))
+            using (var reader = new JsonTextReader(sr))
+            {
+                return new JsonSerializer().Deserialize<T>(reader);
+            }
         }
 
-        void _UpdateOAuth(JObject oauth_infos)
+        void _ResetOAuth()
         {
-            _OAuthInfos["access_token"] = oauth_infos["token"];
-            _OAuthInfos["expires_in"] = oauth_infos["expires_in"];
-            _OAuthInfos["expires_at"] = oauth_infos["expires_at"];
-            _OAuthInfos["token_type"] = oauth_infos["token_type"];
-            _OAuthInfos["account_id"] = oauth_infos["account_id"];
-            _OAuthInfos["client_id"] = oauth_infos["client_id"];
-            _OAuthInfos["internal_client"] = oauth_infos["internal_client"];
-            _OAuthInfos["client_service"] = oauth_infos["client_service"];
-            _OAuthInfos["display_name"] = oauth_infos["display_name"];
-            _OAuthInfos["app"] = oauth_infos["app"];
-            _OAuthInfos["in_app_id"] = oauth_infos["in_app_id"];
-            _OAuthInfos["device_id"] = oauth_infos["device_id"];
-            _SessionID = (string)oauth_infos["session_id"];
+            _OAuthInfos = new();
+            _LoggedIn = false;
         }
 
         async Task<string> _GetXSRFToken()
@@ -122,35 +166,39 @@ namespace EpicKit
             return string.Empty;
         }
 
-        async Task _ResumeSession(string access_token)
+        async Task<SessionAccount> _ResumeSession(string access_token)
         {
             Uri uri = new Uri($"https://{Shared.EGS_OAUTH_HOST}/account/api/oauth/verify");
 
             try
             {
                 _WebCookies.GetCookies(uri).Clear();
-                JObject oauth = JObject.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
+                var oauth = _ParseJson<OAuthResumeDetails>(await Shared.WebRunGetStream(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
                     { "User-Agent", Shared.EGS_OAUTH_UAGENT },
                     { "Authorization", access_token },
                 }));
-                _UpdateOAuth(oauth);
+                _OAuthInfos.UpdateOAuth(oauth);
+                _SessionID = oauth.SessionId;
+                _LoggedIn = true;
             }
             catch (Exception e)
             {
                 WebApiException.BuildExceptionFromWebException(e);
             }
+
+            return _OAuthInfos?.Clone();
         }
 
-        async Task<JObject> _StartSession(AuthToken token)
+        async Task<SessionAccount> _StartSession(AuthToken token)
         {
-            FormUrlEncodedContent post_data;
-            var json = default(JObject);
+            var postData = default(FormUrlEncodedContent);
+            var result = new SessionAccount();
 
             switch (token.Type)
             {
                 case AuthToken.TokenType.ExchangeCode:
-                    post_data = new FormUrlEncodedContent(new[]
+                    postData = new FormUrlEncodedContent(new[]
                     {
                         new KeyValuePair<string, string>( "grant_type"   , "exchange_code" ),
                         new KeyValuePair<string, string>( "exchange_code", token.Token ),
@@ -159,7 +207,7 @@ namespace EpicKit
                     break;
 
                 case AuthToken.TokenType.RefreshToken:
-                    post_data = new FormUrlEncodedContent(new[]
+                    postData = new FormUrlEncodedContent(new[]
                     {
                         new KeyValuePair<string, string>( "grant_type"   , "refresh_token" ),
                         new KeyValuePair<string, string>( "refresh_token", token.Token ),
@@ -168,7 +216,7 @@ namespace EpicKit
                     break;
 
                 case AuthToken.TokenType.AuthorizationCode:
-                    post_data = new FormUrlEncodedContent(new[]
+                    postData = new FormUrlEncodedContent(new[]
                     {
                         new KeyValuePair<string, string>( "grant_type"   , "authorization_code" ),
                         new KeyValuePair<string, string>( "code"         , token.Token ),
@@ -177,7 +225,7 @@ namespace EpicKit
                     break;
 
                 case AuthToken.TokenType.ClientCredentials:
-                    post_data = new FormUrlEncodedContent(new[]
+                    postData = new FormUrlEncodedContent(new[]
                     {
                         new KeyValuePair<string, string>( "grant_type"   , "client_credentials" ),
                         new KeyValuePair<string, string>( "token_type"   , "eg1"),
@@ -188,13 +236,13 @@ namespace EpicKit
                     throw new WebApiException("Invalid token type.", WebApiException.InvalidParam);
             }
 
-            Uri uri = new Uri($"https://{Shared.EGS_OAUTH_HOST}/account/api/oauth/token");
+            var uri = new Uri($"https://{Shared.EGS_OAUTH_HOST}/account/api/oauth/token");
 
             _WebCookies.GetCookies(uri).Clear();
 
             try
             {
-                json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, uri, post_data, new Dictionary<string, string>
+                var json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, uri, postData, new Dictionary<string, string>
                 {
                     { "User-Agent", Shared.EGS_OAUTH_UAGENT },
                     { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Shared.EGS_USER}:{Shared.EGS_PASS}"))) }
@@ -202,31 +250,28 @@ namespace EpicKit
 
                 if (json.ContainsKey("errorCode"))
                     WebApiException.BuildErrorFromJson(json);
+
+                var startDetails = json.ToObject<OAuthStartDetails>();
+                result.UpdateOAuth(startDetails);
             }
             catch (Exception e)
             {
                 WebApiException.BuildExceptionFromWebException(e);
             }
 
-            return json;
+            return result;
         }
 
-        public async Task<JObject> LoginAnonymous()
+        public async Task<SessionAccount> LoginAnonymous()
         {
             _ResetOAuth();
 
             _OAuthInfos = await _StartSession(new AuthToken { Type = AuthToken.TokenType.ClientCredentials });
 
-            string access_token = $"bearer {(string)_OAuthInfos["access_token"]}";
-            await _ResumeSession(access_token);
-
-            var json = (JObject)_OAuthInfos.DeepClone();
-            _LoggedIn = true;
-
-            return json;
+            return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
         }
 
-        public async Task<JObject> LoginSID(string sid)
+        public async Task<SessionAccount> LoginSID(string sid)
         {
             _ResetOAuth();
 
@@ -249,11 +294,7 @@ namespace EpicKit
 
                 _OAuthInfos = await _StartSession(new AuthToken { Token = exchange_code, Type = AuthToken.TokenType.ExchangeCode });
 
-                string access_token = $"bearer {(string)_OAuthInfos["access_token"]}";
-                await _ResumeSession(access_token);
-                var json = (JObject)_OAuthInfos.DeepClone();
-                _LoggedIn = true;
-                return json;
+                return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
             }
             catch (Exception e)
             {
@@ -263,7 +304,7 @@ namespace EpicKit
             return null;
         }
 
-        public async Task<JObject> LoginAuthCode(string auth_code)
+        public async Task<SessionAccount> LoginAuthCode(string auth_code)
         {
             _ResetOAuth();
 
@@ -275,12 +316,7 @@ namespace EpicKit
             {
                 _OAuthInfos = await _StartSession(new AuthToken { Token = auth_code, Type = AuthToken.TokenType.AuthorizationCode });
 
-                string access_token = $"bearer {(string)_OAuthInfos["access_token"]}";
-                await _ResumeSession(access_token);
-                // Don't share our internal oauth infos with the user returned oauth.
-                var json = (JObject)_OAuthInfos.DeepClone();
-                _LoggedIn = true;
-                return json;
+                return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
             }
             catch (Exception e)
             {
@@ -290,53 +326,28 @@ namespace EpicKit
             return null;
         }
 
-        public async Task<JObject> Login(JObject oauth_infos)
+        public async Task<SessionAccount> LoginAsync(string accessToken, DateTimeOffset accessTokenExpiresAt, string refreshToken, DateTimeOffset refreshTokenExpiresAt)
         {
             _ResetOAuth();
 
             try
             {
-                if (!oauth_infos.ContainsKey("access_token") || !oauth_infos.ContainsKey("expires_at"))
-                    throw new WebApiException("OAuth credentials is missing data.", WebApiException.InvalidParam);
-
-                DateTime dt = new DateTime();
+                if (accessTokenExpiresAt > DateTime.Now && (accessTokenExpiresAt - DateTime.Now) > TimeSpan.FromMinutes(10))
                 {
-                    JToken date_token = oauth_infos["expires_at"];
-                    if (date_token.Type == JTokenType.String)
+                    var result = await _ResumeSession($"bearer {accessToken}");
+                    if  (result != null)
                     {
-                        dt = DateTimeOffset.ParseExact(
-                          (string)oauth_infos["expires_at"],
-                          new string[] { "yyyy-MM-dd'T'HH:mm:ss.FFFK" },
-                          CultureInfo.InvariantCulture,
-                          DateTimeStyles.None).UtcDateTime;
+                        _OAuthInfos.RefreshToken = refreshToken;
+                        _OAuthInfos.RefreshExpiresAt = refreshTokenExpiresAt;
                     }
-                    else if (date_token.Type == JTokenType.Date)
-                    {
-                        dt = (DateTime)date_token;
-                    }
-                    else
-                        throw new WebApiException("OAuth credentials 'expires_at' is not an ISO8601 date.", WebApiException.InvalidParam);
+                    return result;
                 }
 
-                if (dt > DateTime.Now && (dt - DateTime.Now) > TimeSpan.FromMinutes(10))
-                {
-                    string access_token = string.Format("bearer {0}", (string)oauth_infos["access_token"]);
-                    _OAuthInfos = (JObject)oauth_infos.DeepClone();
-                    await _ResumeSession(access_token);
-                    // Don't share our internal oauth infos with the user returned oauth.
-                    var json = (JObject)_OAuthInfos.DeepClone();
-                    _LoggedIn = true;
-                    return json;
-                }
-                else
-                {
-                    _OAuthInfos = await _StartSession(new AuthToken { Token = (string)oauth_infos["refresh_token"], Type = AuthToken.TokenType.RefreshToken });
-                    await _ResumeSession(string.Format("bearer {0}", (string)_OAuthInfos["access_token"]));
-                    // Don't share our internal oauth infos with the user returned oauth.
-                    var json = (JObject)_OAuthInfos.DeepClone();
-                    _LoggedIn = true;
-                    return json;
-                }
+                if (refreshTokenExpiresAt < DateTime.Now)
+                    return null;
+
+                await _StartSession(new AuthToken { Token = refreshToken, Type = AuthToken.TokenType.RefreshToken });
+                return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
             }
             catch (Exception e)
             {
@@ -352,7 +363,7 @@ namespace EpicKit
             {
                 try
                 {
-                    Uri uri = new Uri($"https://{Shared.EGS_OAUTH_HOST}/account/api/oauth/sessions/kill/{(string)_OAuthInfos["access_token"]}");
+                    Uri uri = new Uri($"https://{Shared.EGS_OAUTH_HOST}/account/api/oauth/sessions/kill/{_OAuthInfos.AccessToken}");
 
                     return _WebHttpClient.DeleteAsync(uri);
                 }
@@ -367,14 +378,14 @@ namespace EpicKit
             return Task.CompletedTask;
         }
 
-        public async Task<string> GetArtifactServiceTicket(string sandbox_id, string artifact_id, string label = "Live", string platform = "Windows")
+        public async Task<string> GetArtifactServiceTicket(string sandboxId, string artifactId, string label = "Live", string platform = "Windows")
         {
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
             try
             {
-                Uri uri = new Uri($"https://{Shared.EGS_ARTIFACT_HOST}/artifact-service/api/public/v1/dependency/sandbox/{sandbox_id}/artifact/{artifact_id}/ticket");
+                Uri uri = new Uri($"https://{Shared.EGS_ARTIFACT_HOST}/artifact-service/api/public/v1/dependency/sandbox/{sandboxId}/artifact/{artifactId}/ticket");
 
                 JObject json = new JObject
                 {
@@ -438,7 +449,7 @@ namespace EpicKit
                 JObject response = JObject.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
                     { "User-Agent", Shared.EGL_UAGENT },
-                    { "Authorization", $"bearer {(string)_OAuthInfos["access_token"]}" },
+                    { "Authorization", $"bearer {_OAuthInfos.AccessToken}" },
                 }));
 
                 if (response.ContainsKey("errorCode"))
@@ -457,12 +468,12 @@ namespace EpicKit
         /// <summary>
         /// Get the refresh token that can be used to start a game.
         /// </summary>
-        /// <param name="exchange_code">Exchange code generated by GetAppExchangeCode.</param>
-        /// <param name="deployement_id">Application DeploymentId.</param>
-        /// <param name="user_id">Application ClientId.</param>
+        /// <param name="exchangeCode">Exchange code generated by GetAppExchangeCode.</param>
+        /// <param name="deployementId">Application DeploymentId.</param>
+        /// <param name="userId">Application ClientId.</param>
         /// <param name="password">Application ClientSecret.</param>
         /// <returns></returns>
-        public async Task<string> GetAppRefreshTokenFromExchangeCode(string exchange_code, string deployement_id, string user_id, string password, AuthorizationScopes[] scopes)
+        public async Task<string> GetAppRefreshTokenFromExchangeCode(string exchangeCode, string deployementId, string userId, string password, AuthorizationScopes[] scopes)
         {
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
@@ -475,8 +486,8 @@ namespace EpicKit
                 var formContent = new List<KeyValuePair<string, string>>
                 {
                     new KeyValuePair<string, string>( "grant_type", "exchange_code" ),
-                    new KeyValuePair<string, string>( "exchange_code", exchange_code ),
-                    new KeyValuePair<string, string>( "deployment_id", deployement_id ),
+                    new KeyValuePair<string, string>( "exchange_code", exchangeCode ),
+                    new KeyValuePair<string, string>( "deployment_id", deployementId ),
                 };
 
                 if (scopes?.Length > 0)
@@ -486,7 +497,7 @@ namespace EpicKit
 
                 response = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, uri, content, new Dictionary<string, string>
                 {
-                    { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{user_id}:{password}"))) },
+                    { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{userId}:{password}"))) },
                 }));
             }
             catch (Exception e)
@@ -513,9 +524,9 @@ namespace EpicKit
             return (string)response["refresh_token"];
         }
 
-        public async Task<string> RunContinuationToken(string continuation_token, string deployement_id, string user_id, string password)
+        public async Task<string> RunContinuationToken(string continuationToken, string deployementId, string userId, string password)
         {
-            return await Shared.RunContinuationToken(_WebHttpClient, continuation_token, deployement_id, user_id, password);
+            return await Shared.RunContinuationToken(_WebHttpClient, continuationToken, deployementId, userId, password);
         }
 
         private string _GetGameCommandLine(AuthToken token, string appid)
@@ -523,10 +534,10 @@ namespace EpicKit
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
-            if (!_OAuthInfos.ContainsKey("display_name"))
+            if (string.IsNullOrWhiteSpace(_OAuthInfos.DisplayName))
                 throw new WebApiException("OAuth infos doesn't contain 'display_name'.", WebApiException.NotFound);
 
-            if (!_OAuthInfos.ContainsKey("account_id"))
+            if (string.IsNullOrWhiteSpace(_OAuthInfos.AccountId))
                 throw new WebApiException("OAuth infos doesn't contain 'account_id'.", WebApiException.NotFound);
 
             string auth_type = string.Empty;
@@ -543,7 +554,7 @@ namespace EpicKit
 
             try
             {
-                return string.Format("-AUTH_LOGIN=unused -AUTH_PASSWORD={0} -AUTH_TYPE={1} -epicapp={2} -epicenv=Prod -EpicPortal -epicusername={3} -epicuserid={4} -epiclocal=en", token.Token, auth_type, appid, (string)_OAuthInfos["display_name"], (string)_OAuthInfos["account_id"]);
+                return string.Format("-AUTH_LOGIN=unused -AUTH_PASSWORD={0} -AUTH_TYPE={1} -epicapp={2} -epicenv=Prod -EpicPortal -epicusername={3} -epicuserid={4} -epiclocal=en", token.Token, auth_type, appid, _OAuthInfos.DisplayName, _OAuthInfos.AccountId);
             }
             catch (Exception e)
             {
@@ -551,11 +562,11 @@ namespace EpicKit
             }
         }
 
-        public string GetGameExchangeCodeCommandLine(string exchange_code, string appid) =>
-            _GetGameCommandLine(new AuthToken { Token = exchange_code, Type = AuthToken.TokenType.ExchangeCode }, appid);
+        public string GetGameExchangeCodeCommandLine(string exchangeCode, string appid) =>
+            _GetGameCommandLine(new AuthToken { Token = exchangeCode, Type = AuthToken.TokenType.ExchangeCode }, appid);
 
-        public string GetGameTokenCommandLine(string refresh_token, string appid) =>
-            _GetGameCommandLine(new AuthToken { Token = refresh_token, Type = AuthToken.TokenType.RefreshToken }, appid);
+        public string GetGameTokenCommandLine(string refreshToken, string appid) =>
+            _GetGameCommandLine(new AuthToken { Token = refreshToken, Type = AuthToken.TokenType.RefreshToken }, appid);
 
         public async Task<List<ApplicationAsset>> GetApplicationsAssets(string platform = "Windows", string label = "Live")
         {
@@ -573,7 +584,7 @@ namespace EpicKit
 
                 JArray response = JArray.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
-                    { "Authorization", $"bearer {(string)_OAuthInfos["access_token"]}" },
+                    { "Authorization", $"bearer {_OAuthInfos.AccessToken}" },
                 }));
 
                 List<ApplicationAsset> app_assets = new List<ApplicationAsset>();
@@ -593,18 +604,18 @@ namespace EpicKit
             return null;
         }
 
-        public async Task<JObject> GetGameManifest(string game_namespace, string catalog_id, string app_name, string platform = "Windows", string label = "Live")
+        public async Task<JObject> GetGameManifest(string gameNamespace, string catalogId, string appName, string platform = "Windows", string label = "Live")
         {
             if (!_LoggedIn)
                 throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
             try
             {
-                Uri uri = new Uri($"https://{Shared.EGS_LAUNCHER_HOST}/launcher/api/public/assets/v2/platform/{platform}/namespace/{game_namespace}/catalogItem/{catalog_id}/app/{app_name}/label/{label}");
+                Uri uri = new Uri($"https://{Shared.EGS_LAUNCHER_HOST}/launcher/api/public/assets/v2/platform/{platform}/namespace/{gameNamespace}/catalogItem/{catalogId}/app/{appName}/label/{label}");
 
                 var json = JObject.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
-                    { "Authorization", $"bearer {(string)_OAuthInfos["access_token"]}" },
+                    { "Authorization", $"bearer {_OAuthInfos.AccessToken}" },
                 }));
 
                 if (json.ContainsKey("errorCode"))
@@ -620,9 +631,9 @@ namespace EpicKit
             return null;
         }
 
-        public async Task<ManifestDownloadInfos> GetManifestDownloadInfos(string game_namespace, string catalog_id, string app_name, string platform = "Windows", string label = "Live")
+        public async Task<ManifestDownloadInfos> GetManifestDownloadInfos(string gameNamespace, string catalogItemId, string appName, string platform = "Windows", string label = "Live")
         {
-            var manifestResult = await GetGameManifest(game_namespace, catalog_id, app_name, platform, label);
+            var manifestResult = await GetGameManifest(gameNamespace, catalogItemId, appName, platform, label);
 
             var result = new ManifestDownloadInfos();
 
@@ -710,11 +721,11 @@ namespace EpicKit
                     { "count", count.ToString() },
                 };
                 string q = Shared.NameValueCollectionToQueryString(getData);
-                Uri uri = new Uri($"https://{Shared.EGS_ENTITLEMENT_HOST}/entitlement/api/account/{(string)_OAuthInfos["account_id"]}/entitlements?{q}");
+                Uri uri = new Uri($"https://{Shared.EGS_ENTITLEMENT_HOST}/entitlement/api/account/{_OAuthInfos.AccountId}/entitlements?{q}");
 
                 JArray response = JArray.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
-                    { "Authorization", $"bearer {(string)_OAuthInfos["access_token"]}" },
+                    { "Authorization", $"bearer {_OAuthInfos.AccessToken}" },
                 }));
 
                 List<EntitlementModel> entitlements = new List<EntitlementModel>();
@@ -754,7 +765,7 @@ namespace EpicKit
 
                 JObject response = JObject.Parse(await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
-                    { "Authorization", $"bearer {(string)_OAuthInfos["access_token"]}" },
+                    { "Authorization", $"bearer {_OAuthInfos.AccessToken}" },
                 }));
 
                 StoreApplicationInfos appInfos = null;

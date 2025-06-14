@@ -77,6 +77,27 @@ namespace EpicKit
             return t;
         }
 
+        internal static async Task<Stream> WebRunGetStream(HttpClient client, HttpRequestMessage request, Dictionary<string, string> headers)
+        {
+            Dictionary<string, string> added_headers = new Dictionary<string, string>();
+            foreach (var item in headers)
+            {
+                if (client.DefaultRequestHeaders.TryAddWithoutValidation(item.Key, item.Value))
+                {
+                    added_headers.Add(item.Key, item.Value);
+                }
+            }
+
+            var t = await (await client.SendAsync(request, HttpCompletionOption.ResponseContentRead)).Content.ReadAsStreamAsync();
+
+            foreach (var item in added_headers)
+            {
+                client.DefaultRequestHeaders.Remove(item.Key);
+            }
+
+            return t;
+        }
+
         internal static async Task<string> WebRunPost(HttpClient client, Uri uri, HttpContent request, Dictionary<string, string> headers)
         {
             foreach (var item in headers)
@@ -85,6 +106,23 @@ namespace EpicKit
             }
 
             var t = await (await client.PostAsync(uri, request)).Content.ReadAsStringAsync();
+
+            foreach (var item in headers)
+            {
+                client.DefaultRequestHeaders.Remove(item.Key);
+            }
+
+            return t;
+        }
+
+        internal static async Task<Stream> WebRunPostStream(HttpClient client, Uri uri, HttpContent request, Dictionary<string, string> headers)
+        {
+            foreach (var item in headers)
+            {
+                client.DefaultRequestHeaders.TryAddWithoutValidation(item.Key, item.Value);
+            }
+
+            var t = await (await client.PostAsync(uri, request)).Content.ReadAsStreamAsync();
 
             foreach (var item in headers)
             {
