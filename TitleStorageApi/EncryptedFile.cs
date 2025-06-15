@@ -1,5 +1,4 @@
-﻿using System;
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
 namespace EpicKit.TitleStorageApi;
 
@@ -44,7 +43,7 @@ public class EncryptedFile : IDisposable
         binaryReader.Read(_buffer, 0, fileBytesLeft);
     }
 
-    public byte[] Decipher(byte[] key)
+    public byte[] Decrypt(byte[] key)
     {
         _CheckDisposed();
 
@@ -57,10 +56,10 @@ public class EncryptedFile : IDisposable
         return plaintextBytes;
     }
 
-    public byte[] ReadFileAndDecipher(Stream stream, byte[] key)
+    public byte[] ReadFileAndDecrypt(Stream stream, byte[] key)
     {
         ReadFile(stream);
-        return Decipher(key);
+        return Decrypt(key);
     }
 
     public void Dispose()
