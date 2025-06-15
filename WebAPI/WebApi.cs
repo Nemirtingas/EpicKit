@@ -339,6 +339,8 @@ namespace EpicKit
                     {
                         _OAuthInfos.RefreshToken = refreshToken;
                         _OAuthInfos.RefreshExpiresAt = refreshTokenExpiresAt;
+                        result.RefreshToken = refreshToken;
+                        result.RefreshExpiresAt = refreshTokenExpiresAt;
                     }
                     return result;
                 }
@@ -707,6 +709,15 @@ namespace EpicKit
 
             return result;
         }
+
+
+        //def get_delta_manifest(self, base_url, old_build_id, new_build_id):
+        //    """Get optimized delta manifest (doesn't seem to exist for most games)"""
+        //    if old_build_id == new_build_id:
+        //        return None
+        //
+        //    r = self.egs.unauth_session.get(f'{base_url}/Deltas/{new_build_id}/{old_build_id}.delta')
+        //    return r.content if r.status_code == 200 else None
 
         public async Task<List<EntitlementModel>> GetUserEntitlements(uint start = 0, uint count = 5000)
         {

@@ -242,21 +242,21 @@ namespace EpicKit.WebAPI.Game
                 case AuthToken.TokenType.ExchangeCode:
                     content = new FormUrlEncodedContent(new[]
                     {
-                            new KeyValuePair<string, string>( "grant_type"   , "exchange_code" ),
-                            new KeyValuePair<string, string>( "scope"        , "openid" ),
-                            new KeyValuePair<string, string>( "exchange_code", token.Token ),
-                            new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
-                        });
+                        new KeyValuePair<string, string>( "grant_type"   , "exchange_code" ),
+                        new KeyValuePair<string, string>( "scope"        , "openid" ),
+                        new KeyValuePair<string, string>( "exchange_code", token.Token ),
+                        new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
+                    });
                     break;
 
                 case AuthToken.TokenType.RefreshToken:
                     content = new FormUrlEncodedContent(new[]
                     {
-                            new KeyValuePair<string, string>( "grant_type"   , "refresh_token" ),
-                            new KeyValuePair<string, string>( "scope"        , "openid" ),
-                            new KeyValuePair<string, string>( "refresh_token", token.Token ),
-                            new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
-                        });
+                        new KeyValuePair<string, string>( "grant_type"   , "refresh_token" ),
+                        new KeyValuePair<string, string>( "scope"        , "openid" ),
+                        new KeyValuePair<string, string>( "refresh_token", token.Token ),
+                        new KeyValuePair<string, string>( "deployment_id", DeploymentId ),
+                    });
                     break;
             }
 
