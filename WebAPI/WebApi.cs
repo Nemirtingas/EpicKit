@@ -173,13 +173,19 @@ namespace EpicKit
             try
             {
                 _WebCookies.GetCookies(uri).Clear();
-                var oauth = _ParseJson<OAuthResumeDetails>(await Shared.WebRunGetStream(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
+
+                var json = _ParseJson<JObject>(await Shared.WebRunGetStream(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
                 {
                     { "User-Agent", Shared.EGS_OAUTH_UAGENT },
                     { "Authorization", access_token },
                 }));
-                _OAuthInfos.UpdateOAuth(oauth);
-                _SessionID = oauth.SessionId;
+
+                if (json.ContainsKey("errorCode"))
+                    WebApiException.BuildErrorFromJson(json);
+
+                var resultDetails = json.ToObject<OAuthResumeDetails>();
+                _OAuthInfos.UpdateOAuth(resultDetails);
+                _SessionID = resultDetails.SessionId;
                 _LoggedIn = true;
             }
             catch (Exception e)
@@ -190,7 +196,7 @@ namespace EpicKit
             return _OAuthInfos?.Clone();
         }
 
-        async Task<SessionAccount> _StartSession(AuthToken token)
+        async Task _StartSession(AuthToken token)
         {
             var postData = default(FormUrlEncodedContent);
             var result = new SessionAccount();
@@ -259,15 +265,14 @@ namespace EpicKit
                 WebApiException.BuildExceptionFromWebException(e);
             }
 
-            return result;
+            _OAuthInfos = result;
         }
 
         public async Task<SessionAccount> LoginAnonymous()
         {
             _ResetOAuth();
 
-            _OAuthInfos = await _StartSession(new AuthToken { Type = AuthToken.TokenType.ClientCredentials });
-
+            await _StartSession(new AuthToken { Type = AuthToken.TokenType.ClientCredentials });
             return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
         }
 
@@ -292,8 +297,7 @@ namespace EpicKit
 
                 string exchange_code = await _GetExchangeCode(await _GetXSRFToken());
 
-                _OAuthInfos = await _StartSession(new AuthToken { Token = exchange_code, Type = AuthToken.TokenType.ExchangeCode });
-
+                await _StartSession(new AuthToken { Token = exchange_code, Type = AuthToken.TokenType.ExchangeCode });
                 return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
             }
             catch (Exception e)
@@ -314,8 +318,7 @@ namespace EpicKit
 
             try
             {
-                _OAuthInfos = await _StartSession(new AuthToken { Token = auth_code, Type = AuthToken.TokenType.AuthorizationCode });
-
+                await _StartSession(new AuthToken { Token = auth_code, Type = AuthToken.TokenType.AuthorizationCode });
                 return await _ResumeSession($"bearer {_OAuthInfos.AccessToken}");
             }
             catch (Exception e)
