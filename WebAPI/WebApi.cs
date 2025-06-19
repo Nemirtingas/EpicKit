@@ -338,7 +338,7 @@ namespace EpicKit
                 if (accessTokenExpiresAt > DateTime.Now && (accessTokenExpiresAt - DateTime.Now) > TimeSpan.FromMinutes(10))
                 {
                     var result = await _ResumeSession($"bearer {accessToken}");
-                    if  (result != null)
+                    if (result != null)
                     {
                         _OAuthInfos.RefreshToken = refreshToken;
                         _OAuthInfos.RefreshExpiresAt = refreshTokenExpiresAt;
