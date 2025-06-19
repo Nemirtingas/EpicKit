@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
 	<PackageId>EpicKit</PackageId>
-	<Version>0.4.1</Version>
+	<Version>0.4.2</Version>
 	<Authors>Nemirtingas</Authors>
 	<PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
