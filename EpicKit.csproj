@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
 	<AssemblyName>EpicKit</AssemblyName>
+	<RootNamespace>EpicKit</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>disable</Nullable>
 	<PackageId>EpicKit</PackageId>
