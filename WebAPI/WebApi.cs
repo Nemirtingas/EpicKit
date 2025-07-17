@@ -329,13 +329,13 @@ namespace EpicKit
             return null;
         }
 
-        public async Task<SessionAccount> LoginAsync(string accessToken, DateTimeOffset accessTokenExpiresAt, string refreshToken, DateTimeOffset refreshTokenExpiresAt)
+        public async Task<SessionAccount> LoginAsync(string accessToken, DateTimeOffset accessTokenExpiresAt, string refreshToken, DateTimeOffset refreshTokenExpiresAt, TimeSpan refreshTokenWhenExpiringIn)
         {
             _ResetOAuth();
 
             try
             {
-                if (accessTokenExpiresAt > DateTime.Now && (accessTokenExpiresAt - DateTime.Now) > TimeSpan.FromMinutes(10))
+                if (accessTokenExpiresAt > DateTime.Now && (accessTokenExpiresAt - DateTime.Now) > refreshTokenWhenExpiringIn)
                 {
                     var result = await _ResumeSession($"bearer {accessToken}");
                     if (result != null)
