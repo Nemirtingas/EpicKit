@@ -14,7 +14,7 @@ public class StoreApplicationReleaseInfo
     public List<string> Platforms { get; set; }
 
     [JsonProperty(PropertyName = "dateAdded")]
-    public DateTime DateAdded { get; set; }
+    public DateTime? DateAdded { get; set; }
 
     public StoreApplicationReleaseInfo()
     {
