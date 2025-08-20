@@ -22,6 +22,17 @@ namespace EpicKit.Manifest
         public bool Equals(Guid other) =>
             other == null ? false : other.Bytes.SequenceEqual(Bytes);
 
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (var b in _Bytes)
+                    hash = hash * 31 + b;
+                return hash;
+            }
+        }
+
         public override string ToString() => string.Concat(
                     BitConverter.ToUInt32(_Bytes, 0).ToString("X8"),
                     BitConverter.ToUInt32(_Bytes, 4).ToString("X8"),
