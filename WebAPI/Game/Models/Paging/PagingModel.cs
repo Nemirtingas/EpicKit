@@ -1,14 +1,13 @@
 ﻿using Newtonsoft.Json;
 
-namespace EpicKit.WebAPI.Game.Models.Paging
+namespace EpicKit.WebAPI.Game.Models.Paging;
+
+public class PagingModel
 {
-    public class PagingModel
-    {
-        [JsonProperty("count")]
-        public long Count { get; set; }
-        [JsonProperty("start")]
-        public long Start { get; set; }
-        [JsonProperty("total")]
-        public long Total { get; set; }
-    }
+    [JsonProperty("count")]
+    public long Count { get; set; }
+    [JsonProperty("start")]
+    public long Start { get; set; }
+    [JsonProperty("total")]
+    public long Total { get; set; }
 }

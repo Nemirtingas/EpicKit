@@ -1,6 +1,5 @@
-﻿namespace EpicKit.WebAPI.Game.Models.Catalog
+﻿namespace EpicKit.WebAPI.Game.Models.Catalog;
+
+public class CatalogItemReleaseInfoModel
 {
-    public class CatalogItemReleaseInfoModel
-    {
-    }
 }

@@ -11,7 +11,7 @@ internal class OAuthResumeDetails
     public uint ExpiresIn { get; set; }
 
     [JsonProperty("expires_at")]
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     [JsonProperty("token_type")]
     public string TokenType { get; set; }

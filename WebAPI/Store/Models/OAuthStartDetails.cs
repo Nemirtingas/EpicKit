@@ -11,7 +11,7 @@ internal class OAuthStartDetails
     public uint ExpiresIn { get; set; }
 
     [JsonProperty("expires_at")]
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     [JsonProperty("token_type")]
     public string TokenType { get; set; }
@@ -23,7 +23,7 @@ internal class OAuthStartDetails
     public uint RefreshExpiresIn { get; set; }
 
     [JsonProperty("refresh_expires_at")]
-    public DateTimeOffset RefreshExpiresAt { get; set; }
+    public DateTime RefreshExpiresAt { get; set; }
 
     [JsonProperty("account_id")]
     public string AccountId { get; set; }

@@ -1,20 +1,19 @@
 using Newtonsoft.Json;
 
-namespace EpicKit.WebAPI.Store.Models
+namespace EpicKit.WebAPI.Store.Models;
+
+public class StoreApplicationCategory
 {
-    public class StoreApplicationCategory
+    [JsonProperty(PropertyName = "path")]
+    public string Path { get; set; }
+
+    public StoreApplicationCategory()
     {
-        [JsonProperty(PropertyName = "path")]
-        public string Path { get; set; }
+        Reset();
+    }
 
-        public StoreApplicationCategory()
-        {
-            Reset();
-        }
-
-        public void Reset()
-        {
-            Path = string.Empty;
-        }
+    public void Reset()
+    {
+        Path = string.Empty;
     }
 }

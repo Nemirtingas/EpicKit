@@ -1,24 +1,23 @@
 using Newtonsoft.Json;
 
-namespace EpicKit.WebAPI.Store.Models
+namespace EpicKit.WebAPI.Store.Models;
+
+public class StoreApplicationCustomAttribute
 {
-    public class StoreApplicationCustomAttribute
+    [JsonProperty(PropertyName = "type")]
+    public string Type;
+
+    [JsonProperty(PropertyName = "value")]
+    public string Value;
+
+    public StoreApplicationCustomAttribute()
     {
-        [JsonProperty(PropertyName = "type")]
-        public string Type;
+        Reset();
+    }
 
-        [JsonProperty(PropertyName = "value")]
-        public string Value;
-
-        public StoreApplicationCustomAttribute()
-        {
-            Reset();
-        }
-
-        public void Reset()
-        {
-            Type = string.Empty;
-            Value = string.Empty;
-        }
+    public void Reset()
+    {
+        Type = string.Empty;
+        Value = string.Empty;
     }
 }
