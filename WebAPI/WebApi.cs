@@ -16,13 +16,13 @@ namespace EpicKit
         public string AccessToken { get; set; }
 
         [JsonProperty("expires_at")]
-        public DateTimeOffset AccessTokenExpiresAt { get; set; }
+        public DateTime AccessTokenExpiresAt { get; set; }
 
         [JsonProperty("refresh_token")]
         public string RefreshToken { get; set; }
 
         [JsonProperty("refresh_expires_at")]
-        public DateTimeOffset RefreshExpiresAt { get; set; }
+        public DateTime RefreshExpiresAt { get; set; }
 
         [JsonProperty("account_id")]
         public string AccountId { get; set; }
@@ -329,13 +329,13 @@ namespace EpicKit
             return null;
         }
 
-        public async Task<SessionAccount> LoginAsync(string accessToken, DateTimeOffset accessTokenExpiresAt, string refreshToken, DateTimeOffset refreshTokenExpiresAt, TimeSpan refreshTokenWhenExpiringIn)
+        public async Task<SessionAccount> LoginAsync(string accessToken, DateTime accessTokenExpiresAt, string refreshToken, DateTime refreshTokenExpiresAt, TimeSpan refreshTokenWhenExpiringIn)
         {
             _ResetOAuth();
 
             try
             {
-                if (accessTokenExpiresAt > DateTime.Now && (accessTokenExpiresAt - DateTime.Now) > refreshTokenWhenExpiringIn)
+                if (accessTokenExpiresAt > DateTime.UtcNow && (accessTokenExpiresAt - DateTime.UtcNow) > refreshTokenWhenExpiringIn)
                 {
                     var result = await _ResumeSession($"bearer {accessToken}");
                     if (result != null)
@@ -348,7 +348,7 @@ namespace EpicKit
                     return result;
                 }
 
-                if (refreshTokenExpiresAt < DateTime.Now)
+                if (refreshTokenExpiresAt < DateTime.UtcNow)
                     return null;
 
                 await _StartSession(new AuthToken { Token = refreshToken, Type = AuthToken.TokenType.RefreshToken });

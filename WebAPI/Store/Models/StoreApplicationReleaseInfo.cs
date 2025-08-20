@@ -11,7 +11,7 @@ namespace EpicKit.WebAPI.Store.Models
         public string AppId { get; set; }
 
         [JsonProperty(PropertyName = "platform")]
-        public List<string> Platform { get; set; }
+        public List<string> Platforms { get; set; }
 
         [JsonProperty(PropertyName = "dateAdded")]
         public DateTime DateAdded { get; set; }
@@ -25,7 +25,7 @@ namespace EpicKit.WebAPI.Store.Models
         {
             Id = string.Empty;
             AppId = string.Empty;
-            Platform = new List<string>();
+            Platforms = new List<string>();
             DateAdded = new DateTime();
         }
     }
