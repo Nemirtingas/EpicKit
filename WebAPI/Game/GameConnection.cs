@@ -49,6 +49,8 @@ public enum GameFeatures : uint
     TitleStorage,
     [EnumMember(Value = "Voice")]
     Voice,
+    [EnumMember(Value = "Ecommerce")]
+    Ecommerce,
 }
 
 public class AchievementThreshold
@@ -118,6 +120,12 @@ public class GameConnection : IDisposable
         v1_15_5,
         v1_16_0,
         v1_16_1,
+        v1_16_2,  
+        v1_16_3,  
+        v1_16_4,  
+        v1_17_0,  
+        v1_17_1_3,
+        v1_18_0_4,
     }
 
     GameAuthModel _GameAuth;
@@ -198,9 +206,15 @@ public class GameConnection : IDisposable
             case ApiVersion.v1_15_5: return "1.15.5-24099393";
             case ApiVersion.v1_16_0: return "1.16.0-27024038";
             case ApiVersion.v1_16_1: return "1.16.1-27379709";
+            case ApiVersion.v1_16_2: return "1.16.2-32273396";
+            case ApiVersion.v1_16_3: return "1.16.3-32303053";
+            case ApiVersion.v1_16_4: return "1.16.4-36651368";
+            case ApiVersion.v1_17_0: return "1.17.0-41373641";
+            case ApiVersion.v1_17_1_3: return "1.18.0.4-45343210";
+            case ApiVersion.v1_18_0_4: return "1.17.1.3-44532354";
         }
 
-        return ApiVersionToString(ApiVersion.v1_16_1);
+        return ApiVersionToString(ApiVersion.v1_18_0_4);
     }
 
     void _MakeNonce(int length)
@@ -211,6 +225,8 @@ public class GameConnection : IDisposable
         _Nonce = new string(Enumerable.Repeat(chars, length)
             .Select(s => s[random.Next(s.Length)]).ToArray());
     }
+
+    public bool HasEcommerce => _GameAuth.Features.Contains(GameFeatures.Ecom) || _GameAuth.Features.Contains(GameFeatures.Ecommerce);
 
     private async Task _GameAuthAsync(string deployementId)
     {
@@ -327,7 +343,7 @@ public class GameConnection : IDisposable
             {
                 WebApiException.BuildErrorFromJson(json);
             }
-            catch(WebApiException ex)
+            catch (WebApiException ex)
             {
                 if (ex.ErrorCode != WebApiException.EOSUserNotFound)
                     throw;
@@ -562,7 +578,7 @@ public class GameConnection : IDisposable
         if (!_LoggedIn)
             throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
 
-        if (!HasFeature(GameFeatures.Ecom))
+        if (!HasEcommerce)
             return;
 
         // https://api.epicgames.dev/epic/ecom/v{version}/identities/{AccountId}/entitlements?sandboxId={namespace}&start=0&count=100&includeRedeemed=true
@@ -583,12 +599,14 @@ public class GameConnection : IDisposable
             { "files", new JArray(files) }
         }), new UTF8Encoding(false), "application/json");
 
-        return JObject.Parse(await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/titlestorage/v{version}/match/deployment/{DeploymentId}/titlestorage/?getDuration=300"), content, new Dictionary<string, string>
+        var response = await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/titlestorage/v{version}/match/deployment/{DeploymentId}/titlestorage/?getDuration=300"), content, new Dictionary<string, string>
         {
             { "Authorization", $"Bearer {GameAccessToken}" },
             { "User-Agent"   , _UserAgent },
             { "X-EOS-Version", _ApiVersion }
-        })).ToObject<TitleStorageResponseModel>();
+        });
+
+        return JObject.Parse(response).ToObject<TitleStorageResponseModel>();
     }
 
     public async Task QueryLeaderboardsAsync(int version = 1)
