@@ -63,8 +63,6 @@ namespace EpicKit.Manifest
 
                     compressedStream.Position = 0;
                     compressedStream.CopyTo(stream);
-
-                    stream.Position = 0;
                 }
             }
         }
