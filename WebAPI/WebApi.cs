@@ -91,7 +91,7 @@ public class WebApi : IDisposable
             CookieContainer = _UnauthWebCookies,
         });
 
-        _UnauthWebHttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "UELauncher/11.0.1-14907503+++Portal+Release-Live Windows/10.0.19041.1.256.64bit");
+        _UnauthWebHttpClient.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", Shared.EGS_LAUNCHER_UAGENT);
     }
 
     public void Dispose()
@@ -122,7 +122,7 @@ public class WebApi : IDisposable
 
             var response = await Shared.WebRunGet(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
             {
-                { "User-Agent", Shared.EGS_OAUTH_UAGENT },
+                { "User-Agent", Shared.EGS_LAUNCHER_UAGENT },
             });
 
             foreach (Cookie c in _WebCookies.GetCookies(uri))
@@ -150,7 +150,7 @@ public class WebApi : IDisposable
             JObject response = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, uri, new StringContent("", Encoding.UTF8), new Dictionary<string, string>
             {
                 { "X-XSRF-TOKEN", xsrf_token },
-                { "User-Agent", Shared.EGS_OAUTH_UAGENT },
+                { "User-Agent", Shared.EGS_LAUNCHER_UAGENT },
             }));
 
             if (!string.IsNullOrEmpty((string)response["code"]))
@@ -176,7 +176,7 @@ public class WebApi : IDisposable
 
             var json = _ParseJson<JObject>(await Shared.WebRunGetStream(_WebHttpClient, new HttpRequestMessage(HttpMethod.Get, uri), new Dictionary<string, string>
             {
-                { "User-Agent", Shared.EGS_OAUTH_UAGENT },
+                { "User-Agent", Shared.EGS_LAUNCHER_UAGENT },
                 { "Authorization", access_token },
             }));
 
@@ -250,7 +250,7 @@ public class WebApi : IDisposable
         {
             var json = JObject.Parse(await Shared.WebRunPost(_WebHttpClient, uri, postData, new Dictionary<string, string>
             {
-                { "User-Agent", Shared.EGS_OAUTH_UAGENT },
+                { "User-Agent", Shared.EGS_LAUNCHER_UAGENT },
                 { "Authorization", string.Format("Basic {0}", Convert.ToBase64String(Encoding.UTF8.GetBytes($"{Shared.EGS_USER}:{Shared.EGS_PASS}"))) }
             }));
 
