@@ -26,6 +26,6 @@ public class StoreApplicationReleaseInfo
         Id = string.Empty;
         AppId = string.Empty;
         Platforms = new List<string>();
-        DateAdded = new DateTime();
+        DateAdded = null;
     }
 }
