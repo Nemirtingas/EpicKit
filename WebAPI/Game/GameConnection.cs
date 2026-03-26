@@ -609,6 +609,29 @@ public class GameConnection : IDisposable
         return JObject.Parse(response).ToObject<TitleStorageResponseModel>();
     }
 
+    public async Task<TitleStorageResponseModel> QueryTitleStorageFileListAsync(IEnumerable<string> tags, int version = 2)
+    {
+        if (!_LoggedIn)
+            throw new WebApiException("User is not logged in.", WebApiException.NotLoggedIn);
+
+        if (!HasFeature(GameFeatures.TitleStorage))
+            return new TitleStorageResponseModel();
+
+        var content = new StringContent(JsonConvert.SerializeObject(new TitleStorageQueryFileListRequest
+        {
+            Tags = tags
+        }), new UTF8Encoding(false), "application/json");
+
+        var response = await Shared.WebRunPost(_WebHttpClient, new Uri($"https://{Shared.EGS_DEV_HOST}/titlestorage/v{version}/tag/deployment/{DeploymentId}/titlestorage/?getDuration=300"), content, new Dictionary<string, string>
+        {
+            { "Authorization", $"Bearer {GameAccessToken}" },
+            { "User-Agent"   , _UserAgent },
+            { "X-EOS-Version", _ApiVersion }
+        });
+
+        return JObject.Parse(response).ToObject<TitleStorageResponseModel>();
+    }
+
     public async Task QueryLeaderboardsAsync(int version = 1)
     {
         if (!_LoggedIn)
