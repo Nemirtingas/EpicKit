@@ -1,4 +1,4 @@
-namespace EpicKit.Manifest
+namespace EpicKit.ManifestApi
 {
     public class Hash
     {

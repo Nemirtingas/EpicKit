@@ -1,17 +1,10 @@
 ﻿using System.Security.Cryptography;
 using Newtonsoft.Json.Linq;
 
-namespace EpicKit.Manifest
+namespace EpicKit.ManifestApi
 {
     public class Manifest
     {
-        [Flags]
-        public enum ManifestStoreFlags : byte
-        {
-            None = 0x00,
-            Deflate = 0x01,
-        }
-
         public const uint ManifestMagic = 0x44BEC00C;
 
         public uint Magic { get; private set; } = 0;
@@ -21,6 +14,7 @@ namespace EpicKit.Manifest
         public byte[] Sha1Hash { get; private set; } = new byte[20];
         public ManifestStoreFlags StoreFlags { get; private set; } = ManifestStoreFlags.None;
         public uint Version { get; private set; } = 0;
+
 
         public ManifestMetadata Metadata { get; private set; } = new ManifestMetadata();
         public ChunkMetadataList ChunkDataList { get; private set; } = new ChunkMetadataList();

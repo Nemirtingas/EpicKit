@@ -1,4 +1,4 @@
-﻿namespace EpicKit.Manifest
+﻿namespace EpicKit.ManifestApi
 {
     /// <summary>
     /// Performs 32-bit reversed cyclic redundancy checks.

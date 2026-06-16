@@ -1,11 +1,14 @@
 using Newtonsoft.Json.Linq;
 
-namespace EpicKit.Manifest
+namespace EpicKit.ManifestApi
 {
     public class ChunkMetadataList
     {
         static private string GetChunkDir(uint manifest_version)
         {
+            if (manifest_version >= 22)
+                return "ChunksV5";
+
             if (manifest_version >= 15)
                 return "ChunksV4";
 

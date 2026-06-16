@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace EpicKit.Manifest
+namespace EpicKit.ManifestApi
 {
     class Serializer
     {
