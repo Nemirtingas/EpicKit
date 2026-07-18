@@ -23,7 +23,7 @@ public class StoreApplicationAchievementBySandbox
     public StoreApplicationAchievementPlatinumRarity PlatinumRarity { get; set; }
 
     [JsonProperty(PropertyName = "achievements")]
-    public List<StoreApplicationAchievementWrapper> Achievements { get; set; }
+    public List<StoreApplicationAchievement> Achievements { get; set; }
 
     public StoreApplicationAchievementBySandbox()
     {

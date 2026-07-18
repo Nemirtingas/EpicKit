@@ -820,9 +820,9 @@ public class WebApi : IDisposable
         return JObject.Parse(t).ToObject<ApplicationInfos>();
     }
 
-    public async Task<StoreApplicationAchievementBySandbox> GetSandboxAchievements(string sandboxId)
+    public async Task<StoreApplicationAchievementBySandbox> GetSandboxAchievements(string sandboxId, string locale = "en-US")
     {
-        var request = new HttpRequestMessage(HttpMethod.Get, $"https://{Shared.EGS_LAUNCHER_STORE_HOST}/graphql?operationName=Achievement&variables={{\"sandboxId\":\"{sandboxId}\",\"locale\":\"en-US\"}}&extensions={{\"persistedQuery\":{{\"version\":1,\"sha256Hash\":\"9284d2fe200e351d1496feda728db23bb52bfd379b236fc3ceca746c1f1b33f2\"}}}}");
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://{Shared.EGS_LAUNCHER_STORE_HOST}/graphql?operationName=Achievement&variables={{\"sandboxId\":\"{sandboxId}\",\"locale\":\"{locale}\"}}&extensions={{\"persistedQuery\":{{\"version\":1,\"sha256Hash\":\"9284d2fe200e351d1496feda728db23bb52bfd379b236fc3ceca746c1f1b33f2\"}}}}");
 
         var t = await Shared.WebRunGet(_UnauthWebHttpClient, request, new Dictionary<string, string> { { "Referer", "https://store.epicgames.com/en/" } });
         return ((JObject.Parse(t)
@@ -830,6 +830,14 @@ public class WebApi : IDisposable
             ?.GetValue("Achievement") as JObject)
             ?.GetValue("productAchievementsRecordBySandbox")
             ?.ToObject<StoreApplicationAchievementBySandbox>();
+    }
+
+    public async Task<StoreApplicationAchievementBySandboxFromGameApi> GetSandboxAchievementsFromGameApi(string sandboxId, string locale)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Get, $"https://{Shared.EGS_DEV_HOST}/epic/achievements/v1/public/achievements/product/{sandboxId}/locale/{locale}?includeAchievements=true");
+
+        var t = await Shared.WebRunGet(_UnauthWebHttpClient, request, new Dictionary<string, string> { { "Referer", "https://store.epicgames.com/en/" } });
+        return JsonConvert.DeserializeObject<StoreApplicationAchievementBySandboxFromGameApi>(t);
     }
 
     public async Task AutoAcceptContinuationAsync(string deployement_id, string user_id, string password, string continuationToken, AuthorizationScopes[] scopes)
