@@ -1,6 +1,6 @@
 using System.IO.Compression;
 
-namespace EpicKit.Manifest
+namespace EpicKit.ManifestApi
 {
     internal class Tools
     {
@@ -18,11 +18,11 @@ namespace EpicKit.Manifest
             return ms;
         }
 
-        static internal MemoryStream CompressManifestData(Stream stream, Manifest.ManifestStoreFlags store_flags)
+        static internal MemoryStream CompressManifestData(Stream stream, ManifestStoreFlags store_flags)
         {
             var memStream = default(MemoryStream);
 
-            if (store_flags.HasFlag(Manifest.ManifestStoreFlags.Deflate))
+            if (store_flags.HasFlag(ManifestStoreFlags.Deflate))
             {
                 memStream = new MemoryStream();
                 var pos = stream.Position;
@@ -52,11 +52,11 @@ namespace EpicKit.Manifest
             return memStream;
         }
 
-        static internal MemoryStream ReadCompressedData(Stream stream, Manifest.ManifestStoreFlags store_flags)
+        static internal MemoryStream ReadCompressedData(Stream stream, ManifestStoreFlags store_flags)
         {
             MemoryStream data_stream = StreamReadToEnd(stream);
 
-            if (store_flags.HasFlag(Manifest.ManifestStoreFlags.Deflate))
+            if (store_flags.HasFlag(ManifestStoreFlags.Deflate))
             {
                 using (MemoryStream tmp_ms = data_stream)
                 {

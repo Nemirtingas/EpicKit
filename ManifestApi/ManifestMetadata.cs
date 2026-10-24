@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace EpicKit.Manifest
+namespace EpicKit.ManifestApi
 {
     public class ManifestMetadata
     {
